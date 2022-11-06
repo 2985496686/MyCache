@@ -19,5 +19,6 @@ func TestList(t *testing.T) {
 	delete(m, "1")
 	s := m["1"]
 	fmt.Println(s)
-
+	var i bool
+	fmt.Println(i)
 }

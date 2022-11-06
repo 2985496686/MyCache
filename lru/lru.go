@@ -66,7 +66,7 @@ func (c *Cache) Remove(key string) {
 	}
 }
 
-func (c *Cache) Add(key string, v Value) (err error, ok bool) {
+func (c *Cache) Add(key string, v Value) (err error) {
 	c.Remove(key)
 	levBytes := c.maxBytes - c.nbytes
 	vBytes := uint64(len(key)) + v.Len()
@@ -80,7 +80,6 @@ func (c *Cache) Add(key string, v Value) (err error, ok bool) {
 	c.nbytes += vBytes
 	ele := c.ll.PushFront(&Entity{key, v})
 	c.cache[key] = ele
-	ok = true
 	return
 }
 
