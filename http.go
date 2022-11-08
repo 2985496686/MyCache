@@ -1,18 +1,25 @@
 package MyCache
 
 import (
+	"MyCache/consistent"
 	"fmt"
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 )
 
 type HTTPPool struct {
-	basePath string
-	self     string
+	basePath    string
+	self        string
+	mu          sync.Mutex
+	peers       consistent.Map
+	httpGetters map[string]*HttpGetter
 }
 
 const defaultBasePath = "/my-cache/"
+
+const defaultReplicas = 50
 
 func NewHTTPPool(self string) *HTTPPool {
 	return &HTTPPool{
@@ -46,4 +53,25 @@ func (h *HTTPPool) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 	}
 	writer.Header().Set("Content-Type", "application/octet-stream")
 	writer.Write(v.ByteSlice())
+}
+
+func (h *HTTPPool) Set(peers ...string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.peers.Add(peers...)
+	h.httpGetters = make(map[string]*HttpGetter, len(peers))
+	for _, peer := range peers {
+		h.httpGetters[peer] = &HttpGetter{peer + h.basePath}
+	}
+}
+
+func (h *HTTPPool) PickPeer(key string) (PeerGetter, bool) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if peer := h.peers.Get(key); peer != "" && peer != h.self {
+		log.Printf("pick peer %s\n", key)
+		httpGetter := h.httpGetters[peer]
+		return httpGetter, true
+	}
+	return nil, false
 }
