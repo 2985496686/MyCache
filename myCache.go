@@ -14,6 +14,7 @@ type Group struct {
 	name      string
 	mainCache *cache
 	getter    Getter
+	peers     PeerPicker
 }
 
 var (
@@ -74,4 +75,28 @@ func (g *Group) populateCache(key string, b ByteValue) (ByteValue, error) {
 		return ByteValue{}, nil
 	}
 	return b, nil
+}
+
+func (g *Group) RegisterPeers(picker PeerPicker) {
+	if g.peers != nil {
+		panic("this group had registered")
+	}
+	g.peers = picker
+}
+
+func (g *Group) load(key string) (ByteValue, error) {
+	if g.peers != nil {
+		if getter, ok := g.peers.PickPeer(key); ok {
+			return g.getFormPeer(key, getter)
+		}
+	}
+	return g.getLocally(key)
+}
+
+func (g *Group) getFormPeer(key string, getter PeerGetter) (ByteValue, error) {
+	bytes, err := getter.Get(g.name, key)
+	if err != nil {
+		return ByteValue{}, err
+	}
+	return ByteValue{bytes}, nil
 }

@@ -1,7 +1,7 @@
 package MyCache
 
 type PeerPicker interface {
-	PickPeer(key string)
+	PickPeer(key string) (PeerGetter, bool)
 }
 
 type PeerGetter interface {

@@ -23,5 +23,4 @@ func (h *HttpGetter) Get(group string, key string) ([]byte, error) {
 		return nil, fmt.Errorf("server return error code:%d", status)
 	}
 	return value, nil
-
 }
