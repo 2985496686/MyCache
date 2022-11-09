@@ -2,6 +2,7 @@ package MyCache
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 )
 
@@ -11,16 +12,15 @@ type HttpGetter struct {
 
 func (h *HttpGetter) Get(group string, key string) ([]byte, error) {
 	var url = fmt.Sprintf("%v%v/%v",
-		defaultBasePath, group, key,
+		h.baseUrl, group, key,
 	)
-	var value []byte
 	resp, err := http.Get(url)
 	if err != nil {
-		return value, err
+		return nil, err
 	}
-	status, _ := resp.Body.Read(value)
-	if status != 200 {
-		return nil, fmt.Errorf("server return error code:%d", status)
+	if resp.Status != "200 OK" {
+		return nil, fmt.Errorf("server return error code:%s", resp.Status)
 	}
+	value, _ := io.ReadAll(resp.Body)
 	return value, nil
 }

@@ -57,7 +57,7 @@ func (g *Group) Get(key string) (ByteValue, error) {
 		log.Printf("[MyCache] %s hit int cache", key)
 		return v, nil
 	}
-	return g.getLocally(key)
+	return g.load(key)
 }
 
 func (g *Group) getLocally(key string) (ByteValue, error) {

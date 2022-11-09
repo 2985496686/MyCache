@@ -13,7 +13,7 @@ type HTTPPool struct {
 	basePath    string
 	self        string
 	mu          sync.Mutex
-	peers       consistent.Map
+	peers       *consistent.Map
 	httpGetters map[string]*HttpGetter
 }
 
@@ -51,13 +51,15 @@ func (h *HTTPPool) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 		http.Error(writer, err.Error(), http.StatusBadRequest)
 		return
 	}
-	writer.Header().Set("Content-Type", "application/octet-stream")
 	writer.Write(v.ByteSlice())
 }
 
 func (h *HTTPPool) Set(peers ...string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	if h.peers == nil {
+		h.peers = consistent.NewMap(defaultReplicas, nil)
+	}
 	h.peers.Add(peers...)
 	h.httpGetters = make(map[string]*HttpGetter, len(peers))
 	for _, peer := range peers {
@@ -69,7 +71,7 @@ func (h *HTTPPool) PickPeer(key string) (PeerGetter, bool) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if peer := h.peers.Get(key); peer != "" && peer != h.self {
-		log.Printf("pick peer %s\n", key)
+		log.Printf("[Server:%s]pick peer %s\n", h.self, peer)
 		httpGetter := h.httpGetters[peer]
 		return httpGetter, true
 	}
