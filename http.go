@@ -2,7 +2,9 @@ package MyCache
 
 import (
 	"MyCache/consistent"
+	"MyCache/protobuf/proto"
 	"fmt"
+	proto2 "google.golang.org/protobuf/proto"
 	"log"
 	"net/http"
 	"strings"
@@ -48,12 +50,15 @@ func (h *HTTPPool) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 		panic(fmt.Sprintf("%s is not exist", groupName))
 	}
 	v, err := group.Get(key)
-
+	body, err := proto2.Marshal(&proto.Response{Value: v.ByteSlice()})
+	if err != nil {
+		panic(err)
+	}
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusBadRequest)
 		return
 	}
-	writer.Write(v.ByteSlice())
+	fmt.Fprintf(writer, string(body))
 }
 
 func (h *HTTPPool) Set(peers ...string) {

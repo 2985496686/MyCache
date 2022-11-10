@@ -1,6 +1,7 @@
 package MyCache
 
 import (
+	"MyCache/protobuf/proto"
 	"MyCache/singleflight"
 	"errors"
 	"log"
@@ -101,11 +102,13 @@ func (g *Group) load(key string) (ByteValue, error) {
 }
 
 func (g *Group) getFormPeer(key string, getter PeerGetter) (ByteValue, error) {
-	bytes, err := getter.Get(g.name, key)
+	req := &proto.Request{Group: g.name, Key: key}
+	res := &proto.Response{}
+	err := getter.Get(req, res)
 	if err != nil {
 		return ByteValue{}, err
 	}
-	rnt := ByteValue{bytes}
+	rnt := ByteValue{res.Value}
 	err = g.mainCache.add(key, rnt)
 	if err != nil {
 		return ByteValue{}, err
