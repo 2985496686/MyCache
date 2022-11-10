@@ -33,6 +33,7 @@ func (h *HTTPPool) Log(format string, v ...interface{}) {
 }
 
 func (h *HTTPPool) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+
 	if hasPrefix := strings.HasPrefix(request.URL.Path, h.basePath); !hasPrefix {
 		panic(fmt.Sprintf("HTTPPool server is no expects url path:%s", request.URL.Path))
 	}
@@ -47,6 +48,7 @@ func (h *HTTPPool) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 		panic(fmt.Sprintf("%s is not exist", groupName))
 	}
 	v, err := group.Get(key)
+
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusBadRequest)
 		return

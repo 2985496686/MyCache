@@ -1,6 +1,7 @@
 package MyCache
 
 import (
+	"MyCache/singleflight"
 	"errors"
 	"log"
 	"sync"
@@ -15,6 +16,7 @@ type Group struct {
 	mainCache *cache
 	getter    Getter
 	peers     PeerPicker
+	sf        *singleflight.Group
 }
 
 var (
@@ -38,6 +40,7 @@ func NewGroup(name string, cacheBytes uint64, getter Getter) *Group {
 		name:      name,
 		mainCache: &cache{maxBytes: cacheBytes},
 		getter:    getter,
+		sf:        &singleflight.Group{},
 	}
 	groups[name] = &group
 	return &group
@@ -50,6 +53,7 @@ func GetGroup(name string) *Group {
 }
 
 func (g *Group) Get(key string) (ByteValue, error) {
+
 	if key == "" {
 		return ByteValue{}, errors.New("key is required")
 	}
@@ -85,12 +89,15 @@ func (g *Group) RegisterPeers(picker PeerPicker) {
 }
 
 func (g *Group) load(key string) (ByteValue, error) {
-	if g.peers != nil {
-		if getter, ok := g.peers.PickPeer(key); ok {
-			return g.getFormPeer(key, getter)
+	value, err := g.sf.Do(key, func(key string) (interface{}, error) {
+		if g.peers != nil {
+			if getter, ok := g.peers.PickPeer(key); ok {
+				return g.getFormPeer(key, getter)
+			}
 		}
-	}
-	return g.getLocally(key)
+		return g.getLocally(key)
+	})
+	return value.(ByteValue), err
 }
 
 func (g *Group) getFormPeer(key string, getter PeerGetter) (ByteValue, error) {
@@ -98,5 +105,10 @@ func (g *Group) getFormPeer(key string, getter PeerGetter) (ByteValue, error) {
 	if err != nil {
 		return ByteValue{}, err
 	}
-	return ByteValue{bytes}, nil
+	rnt := ByteValue{bytes}
+	err = g.mainCache.add(key, rnt)
+	if err != nil {
+		return ByteValue{}, err
+	}
+	return rnt, nil
 }
